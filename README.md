@@ -135,7 +135,7 @@ Ensure you have the following installed:
 
 2.  Build and start the services:
     ```bash
-    docker-compose up --build
+    docker compose up --build
     ```
 
 3.  Access the services using their respective URLs/Ports:
@@ -156,7 +156,7 @@ Ensure you have the following installed:
 4.  **Stopping the cluster:** To stop and remove all containers, networks and volumes defined in `docker-compose.yml`, run:
 
     ```bash
-    docker-compose down
+    docker compose down
     ```
 
 ---
