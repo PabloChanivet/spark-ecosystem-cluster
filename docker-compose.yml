@@ -261,6 +261,7 @@ services:
         --conf spark.sql.hive.metastore.jars=maven
         --conf spark.hadoop.fs.s3a.aws.credentials.provider=org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider
         --conf spark.hadoop.hive.metastore.uris=thrift://172.18.0.9:9083
+        --conf spark.hadoop.fs.s3a.aws.credentials.provider=org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider
         --conf spark.hadoop.fs.s3a.endpoint=http://172.18.0.6:4566
         --conf spark.hadoop.fs.s3a.access.key=test
         --conf spark.hadoop.fs.s3a.secret.key=test
