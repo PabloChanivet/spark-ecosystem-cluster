@@ -9,8 +9,7 @@ networks:
       config:
         - subnet: "172.18.0.0/16"
 
-x-shared-volumes:
-  &spark-volumes
+x-shared-volumes: &spark-volumes
   - ./apps:/opt/spark-apps
   - ./data:/opt/spark-data
   - ./spark/config/metrics.properties:/opt/spark/conf/metrics.properties
@@ -42,7 +41,7 @@ services:
       dockerfile: Dockerfile
     ports:
       - "9091:8080"
-      - "7000:7000"
+      - "7002:7000"
     depends_on:
       - spark-master
     environment:
@@ -104,14 +103,14 @@ services:
     depends_on:
       kafka:
         condition: service_started
-    entrypoint: [ '/usr/bin/bash', '-c' ]
+    entrypoint: ["/usr/bin/bash", "-c"]
     command: |
       "
       set -ex
 
       # blocks until kafka is reachable
       /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server 172.18.0.4:9092 --list
-  
+
       echo -e 'Creating kafka topics'
       /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server 172.18.0.4:9092 --create --if-not-exists --topic topic-events --replication-factor 1 --partitions 1
 
@@ -144,7 +143,12 @@ services:
   init-s3-storage:
     container_name: init-s3-storage
     image: localstack/localstack:3.4.0
-    entrypoint: [ "bash", "-c", "awslocal --endpoint-url http://172.18.0.6:4566 s3 mb s3://my-bucket" ]
+    entrypoint:
+      [
+        "bash",
+        "-c",
+        "awslocal --endpoint-url http://172.18.0.6:4566 s3 mb s3://my-bucket",
+      ]
     depends_on:
       localstack:
         condition: service_healthy
@@ -153,7 +157,7 @@ services:
         ipv4_address: 172.18.0.7
 
   rabbitmq:
-    image: 'rabbitmq:3.12-management'
+    image: "rabbitmq:3.12-management"
     restart: unless-stopped
     ports:
       - "5672:5672"
@@ -173,34 +177,34 @@ services:
       - POSTGRES_PASSWORD
       - POSTGRES_DB
     healthcheck:
-      test: [ "CMD", "psql", "-U", "${POSTGRES_USER}", "${POSTGRES_DB}" ]
+      test: ["CMD", "psql", "-U", "${POSTGRES_USER}", "${POSTGRES_DB}"]
     ports:
-      - '5432:5432'
+      - "5432:5432"
     networks:
       spark-kafka:
         ipv4_address: 172.18.0.8
 
-#  hive-metastore:
-#    image: apache/hive:4.0.0-alpha-2
-#    container_name: hive-metastore
-#    environment:
-#      - SERVICE_NAME=metastore
-#      - DB_DRIVER=postgres
-#      - HIVE_CUSTOM_CONF_DIR=/hive_custom_conf
-#    ports:
-#      - "9083:9083"
-#    volumes:
-#      - ./data/delta/osdp/spark-warehouse:/opt/spark/work-dir/data/delta/osdp/spark-warehouse
-#      - ./hive/conf/hive-site.xml:/opt/hive/conf/hive-site.xml
-#      - ./hive/conf/jars/hadoop-aws-3.2.2.jar:/opt/hive/lib/hadoop-aws-3.2.2.jar
-#      - ./hive/conf/jars/aws-java-sdk-bundle-1.11.375.jar:/opt/hive/lib/aws-java-sdk-bundle-1.11.375.jar
-#      - ./hive/conf/.hiverc:/opt/hive/conf/.hiverc
-#    depends_on:
-#      postgres:
-#        condition: service_healthy
-#    networks:
-#      spark-kafka:
-#        ipv4_address: 172.18.0.9
+  #  hive-metastore:
+  #    image: apache/hive:4.0.0-alpha-2
+  #    container_name: hive-metastore
+  #    environment:
+  #      - SERVICE_NAME=metastore
+  #      - DB_DRIVER=postgres
+  #      - HIVE_CUSTOM_CONF_DIR=/hive_custom_conf
+  #    ports:
+  #      - "9083:9083"
+  #    volumes:
+  #      - ./data/delta/osdp/spark-warehouse:/opt/spark/work-dir/data/delta/osdp/spark-warehouse
+  #      - ./hive/conf/hive-site.xml:/opt/hive/conf/hive-site.xml
+  #      - ./hive/conf/jars/hadoop-aws-3.2.2.jar:/opt/hive/lib/hadoop-aws-3.2.2.jar
+  #      - ./hive/conf/jars/aws-java-sdk-bundle-1.11.375.jar:/opt/hive/lib/aws-java-sdk-bundle-1.11.375.jar
+  #      - ./hive/conf/.hiverc:/opt/hive/conf/.hiverc
+  #    depends_on:
+  #      postgres:
+  #        condition: service_healthy
+  #    networks:
+  #      spark-kafka:
+  #        ipv4_address: 172.18.0.9
 
   hive-metastore:
     build:
@@ -236,9 +240,9 @@ services:
         condition: service_started
     environment:
       - SPARK_WORKLOAD=thrift-server
-      - HIVE_METASTORE_URI=thrift://172.18.0.8:9083
+      - HIVE_METASTORE_URI=thrift://172.18.0.9:9083
       - SPARK_MASTER=spark://172.18.0.10:7077
-      - SPARK_SQL_HIVE_METASTORE_URIS=thrift://172.18.0.8:9083
+      - SPARK_SQL_HIVE_METASTORE_URIS=thrift://172.18.0.9:9083
     ports:
       - "10000:10000"
     entrypoint: >
@@ -255,6 +259,7 @@ services:
         --conf spark.sql.hive.metastore.version=2.3.9
         --conf spark.sql.uris=thrift://172.18.0.9:9083
         --conf spark.sql.hive.metastore.jars=maven
+        --conf spark.hadoop.fs.s3a.aws.credentials.provider=org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider
         --conf spark.hadoop.hive.metastore.uris=thrift://172.18.0.9:9083
         --conf spark.hadoop.fs.s3a.endpoint=http://172.18.0.6:4566
         --conf spark.hadoop.fs.s3a.access.key=test
@@ -287,19 +292,27 @@ services:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
 
   jupyter:
-    image: jupyter/pyspark-notebook:latest
+    build:
+      context: ./jupyter
+      dockerfile: Dockerfile
     container_name: jupyter
     ports:
       - "8888:8888"
+      # - "4040:4040" # Mapea el puerto 4040 para la Spark UI. Como estoy usando jupyter en modo interactivo, la
+      # sesion se genera en el contenedor de jupyter, y para ver la spark ui, necesito mapear ese puerto en ese
+      # contenedor.
     environment:
       - SPARK_MASTER=spark://spark-master:7077
       - SPARK_HOME=/usr/local/spark
       - PYSPARK_PYTHON=python3
+      - SPARK_OPTS=--packages org.apache.hadoop:hadoop-aws:3.3.4,com.amazonaws:aws-java-sdk-bundle:1.12.262
     volumes:
       - ./notebooks:/home/jovyan/work
       - ./apps:/opt/spark-apps
       - ./data:/opt/spark-data
       - ./spark/config/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf
+      - ./tmp:/tmp
+      - ./tmp/jovyan:/home/jovyan # Montar un volumen externo
     depends_on:
       - spark-master
       - kafka
@@ -307,7 +320,7 @@ services:
       spark-kafka:
         ipv4_address: 172.18.0.15
     command: >
-      start.sh jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password=''
+      bash -c "start.sh jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password=''"
 
   airflow-postgres:
     image: postgres:12
@@ -319,7 +332,7 @@ services:
     ports:
       - "5434:5432"
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U airflow" ]
+      test: ["CMD-SHELL", "pg_isready -U airflow"]
       interval: 10s
       retries: 5
     networks:
@@ -376,7 +389,7 @@ services:
       - AIRFLOW__CORE__LOGGING_LEVEL=INFO
     command: airflow webserver
     healthcheck:
-      test: [ "CMD", "curl", "--fail", "http://localhost:8080/health" ]
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
       interval: 30s
       timeout: 30s
       retries: 5
@@ -421,7 +434,7 @@ services:
       - DATABASE_USER=superset
       - DATABASE_PORT=5432
     ports:
-      - '8081:8088'
+      - "8081:8088"
     depends_on:
       superset-database:
         condition: service_healthy
@@ -440,12 +453,12 @@ services:
       - POSTGRES_USER=superset
       - POSTGRES_PASSWORD=secretsecret
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U superset" ]
+      test: ["CMD-SHELL", "pg_isready -U superset"]
       interval: 10s
       timeout: 5s
       retries: 5
     ports:
-      - '5000:5432'
+      - "5001:5432"
     networks:
       spark-kafka:
         ipv4_address: 172.18.0.34

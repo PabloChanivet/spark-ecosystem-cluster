@@ -20,7 +20,7 @@ RUN wget https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VER
 
 # Install necessary Python packages
 RUN /usr/local/bin/python${PYTHON_VERSION%.*} -m pip install --upgrade pip && \
-    /usr/local/bin/python${PYTHON_VERSION%.*} -m pip install virtualenv
+    /usr/local/bin/python${PYTHON_VERSION%.*} -m pip install virtualenv pandas pyarrow
 
 # Set Spark and Hadoop versions as environment variables
 ENV SPARK_VERSION=3.5.0 \
